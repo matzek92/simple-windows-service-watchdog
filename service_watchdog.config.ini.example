@@ -1,0 +1,5 @@
+[services]
+# Comma-separated list of Windows service names to monitor
+# Replace with actual service names from your system
+# Example service names: Spooler, wuauserv, MSSQLSERVER, W3SVC
+services_to_monitor = Spooler, wuauserv
