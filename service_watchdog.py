@@ -148,7 +148,8 @@ def main():
 
     logger.info("=" * 60)
     logger.info("Starting Windows Service Watchdog")
-    logger.info(f"Version: {sji.get_task_version(__file__)}")
+    logger.info(f"Script Version: {job_init.get_job_script_version()}")
+    logger.info(f"Config File Version: {job_init.get_config_file_version()}")
     logger.info("=" * 60)
 
     # Read services from config
