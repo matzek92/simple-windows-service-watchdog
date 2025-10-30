@@ -60,6 +60,8 @@ def check_and_start_services(services, logger):
         services: List of service names to monitor
         logger: Logger instance for logging
     """
+
+    all_running = True
     for service_name in services:
         service_name = service_name.strip()
         if not service_name:
@@ -87,7 +89,18 @@ def check_and_start_services(services, logger):
             }.get(status, f"UNKNOWN({status})")
 
             logger.warning(f"Service {service_name} is not running (status: {status_name})")
-            start_service(service_name, logger)
+            
+            if status == win32service.SERVICE_STOPPED:
+                logger.warning(f"Service {service_name} is stopped, trying to start it")
+                result = start_service(service_name, logger)
+                if not result:
+                    logger.error(f"Failed to start service {service_name}")
+                    all_running = False
+            else:
+                logger.error(f"Service {service_name} is in an unknown state ({status_name})")
+                all_running = False
+
+    return all_running
 
 
 def main():
@@ -121,10 +134,13 @@ def main():
     logger.info(f"Monitoring {len(services)} service(s): {', '.join(services)}")
 
     # Check and start services
-    check_and_start_services(services, logger)
+    all_running = check_and_start_services(services, logger)
+    if not all_running:
+        logger.error("Some services failed to start.")
+        sys.exit(1)
 
     logger.info("=" * 60)
-    logger.info("Windows Service Watchdog completed")
+    logger.info("Windows Service Watchdog completed sucessfully")
     logger.info("=" * 60)
 
 
