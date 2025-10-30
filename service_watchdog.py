@@ -26,6 +26,8 @@ def get_service_status(service_name):
         status = win32serviceutil.QueryServiceStatus(service_name)
         return status[1]
     except Exception:
+        # Service doesn't exist, access denied, or other error
+        # Returning None to indicate failure - caller will log appropriate message
         return None
 
 
@@ -71,7 +73,6 @@ def check_and_start_services(services, logger):
             logger.error(f"Service {service_name} does not exist or cannot be accessed")
             continue
 
-        # win32service.SERVICE_RUNNING = 4
         if status == win32service.SERVICE_RUNNING:
             logger.info(f"Service {service_name} is already running")
         else:
