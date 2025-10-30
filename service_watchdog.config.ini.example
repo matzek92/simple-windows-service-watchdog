@@ -3,3 +3,6 @@
 # Replace with actual service names from your system
 # Example service names: Spooler, wuauserv, MSSQLSERVER, W3SVC
 services_to_monitor = Spooler, wuauserv
+; Optional: add all services whose names start with any of these prefixes
+; Matching is case-insensitive; examples: MSSQL, MySvc-
+service_prefixes =

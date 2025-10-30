@@ -103,6 +103,42 @@ def check_and_start_services(services, logger):
     return all_running
 
 
+def find_services_with_prefixes(prefixes, logger):
+    """
+    Enumerate local Windows services and return those whose service name starts with any given prefix.
+
+    Args:
+        prefixes: List of prefixes to match (case-insensitive)
+        logger: Logger for diagnostic output
+
+    Returns:
+        List of matching service names
+    """
+    try:
+        scm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
+        try:
+            # Returns list of tuples: (service_name, display_name, service_status)
+            listed = win32service.EnumServicesStatus(
+                scm,
+                win32service.SERVICE_WIN32,
+                win32service.SERVICE_STATE_ALL,
+            )
+        finally:
+            win32service.CloseServiceHandle(scm)
+    except Exception as e:
+        logger.error(f"Failed to list services: {e}")
+        raise e
+
+    normalized_prefixes = [p.lower() for p in prefixes if p]
+    matched_names = []
+    for service_name, _display_name, _status in listed:
+        name_lc = service_name.lower()
+        if any(name_lc.startswith(p) for p in normalized_prefixes):
+            matched_names.append(service_name)
+
+    return matched_names
+
+
 def main():
     """Main function to run the service watchdog."""
     # Initialize with sji
@@ -127,11 +163,32 @@ def main():
     services_str = config.get('services', 'services_to_monitor')
     services = [s.strip() for s in services_str.split(',') if s.strip()]
 
-    if not services:
-        logger.warning("No services configured to monitor")
-        return
+    logger.info(f"Loaded {len(services)} service(s) from config: {', '.join(services)}")    
+
+    # Optionally extend with prefixes
+    prefixes = []
+    if config.has_option('services', 'service_prefixes'):
+        prefixes_str = config.get('services', 'service_prefixes')
+        prefixes = [p.strip() for p in prefixes_str.split(',') if p.strip()]
+        if prefixes:
+            logger.info(f"Scanning for services starting with prefixes: {', '.join(prefixes)}")
+            prefixed_services = find_services_with_prefixes(prefixes, logger)
+            if prefixed_services:
+                before_count = len(services)
+                # Deduplicate while preserving order: existing + new that are not already present
+                for name in prefixed_services:
+                    if name not in services:
+                        services.append(name)
+                added = len(services) - before_count
+                logger.info(f"Added {added} service(s) from prefixes")
+            else:
+                logger.warning("No services matched the configured prefixes")
 
     logger.info(f"Monitoring {len(services)} service(s): {', '.join(services)}")
+
+    if len(services) == 0:
+        logger.error("No services configured to monitor")
+        sys.exit(1)
 
     # Check and start services
     all_running = check_and_start_services(services, logger)
@@ -140,7 +197,7 @@ def main():
         sys.exit(1)
 
     logger.info("=" * 60)
-    logger.info("Windows Service Watchdog completed sucessfully")
+    logger.info("Windows Service Watchdog completed successfully")
     logger.info("=" * 60)
 
 

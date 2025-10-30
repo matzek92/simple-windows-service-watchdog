@@ -33,16 +33,16 @@ pip install -r requirements.txt
    copy service_watchdog.config.ini.example service_watchdog.config.ini
    ```
 
-2. Edit `service_watchdog.config.ini` and specify the services you want to monitor:
+2. Edit `service_watchdog.config.ini` and specify the services you want to monitor.
+   You can list explicit service names and/or prefixes to auto-include matching services:
    ```ini
    [services]
-   services_to_monitor = Spooler, wuauserv, MSSQLSERVER
+   services_to_monitor = Spooler, wuauserv
+   service_prefixes = MSSQL, MySvc-
    ```
-
-3. To find service names on your system, open Command Prompt as Administrator and run:
-   ```cmd
-   sc query type= service state= all
-   ```
+   The script enumerates local services and adds any whose service name starts with
+   one of the values in `service_prefixes` (case-insensitive). The `services_to_monitor`
+   option is required; if it is missing, the program exits with code 1.
 
 ## Usage
 
@@ -99,9 +99,14 @@ Service wuauserv is not running (status: STOPPED)
 Starting service: wuauserv
 Service wuauserv started successfully
 ============================================================
-Windows Service Watchdog completed
+Windows Service Watchdog completed successfully
 ============================================================
 ```
+
+## Exit Codes
+
+- 0: Success (all services were already running or were started)
+- 1: Error (missing/invalid config, no services configured, or some services failed to start)
 
 ## License
 
